@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  name            String
+  email           String   @unique
+  passwordHash    String
+  role            String   @default("AGENT")
+  createdAt       DateTime @default(now())
+  assignedTickets Ticket[] @relation("TicketAssignee")
+  createdTickets  Ticket[] @relation("TicketCreator")
+  messages        Message[]
+  activities      Activity[]
+}
+
+model Ticket {
+  id              Int       @id @default(autoincrement())
+  subject         String
+  customerName    String?
+  customerEmail   String?
+  description     String
+  status          String    @default("OPEN")
+  priority        String    @default("MEDIUM")
+  priorityRank    Int       @default(2)
+  assigneeId      Int?
+  assignee        User?     @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById     Int?
+  createdBy       User?     @relation("TicketCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+  firstResponseAt DateTime?
+  messages        Message[]
+  activities      Activity[]
+
+  @@index([status])
+  @@index([priorityRank])
+  @@index([assigneeId])
+  @@index([updatedAt])
+  @@index([createdAt])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type      String
+  body      String
+  authorId  Int?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model Activity {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type      String
+  actorId   Int?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
